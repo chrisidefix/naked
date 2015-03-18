@@ -84,6 +84,14 @@ class NakedIOReadWriteTest(unittest.TestCase):
             else:
                 raise IOError("The ascii test file is not present (test_IO.py.test_file_ascii_safewrite)")
 
+    def test_file_ascii_readwrite_string_type(self):
+        FileWriter(self.ascii_path).write(self.ascii_string) # file write
+        ascii_text = FileReader(self.ascii_path).read() # file read
+        if state.py2:
+            self.assertEqual(type(unicode("test string")), type(ascii_text)) #python 2 treats all input as unicode type
+        elif state.py3:
+            self.assertEqual(type(str("test string")), type(ascii_text)) #python 3 treats all input as str
+
 
     #------------------------------------------------------------------------------
     # UTF-8 file tests
@@ -101,34 +109,62 @@ class NakedIOReadWriteTest(unittest.TestCase):
         self.assertEqual(unicode_text, self.unicode_string)
 
     def test_file_utf8_readwrite_append(self):
+        FileWriter(self.unicode_path).write_utf8(self.unicode_string)
         FileWriter(self.unicode_path).append_utf8(self.unicode_string)
         unicode_text = FileReader(self.unicode_path).read_utf8()
+        self.assertTrue(len(unicode_text)>0)
         self.assertEqual(unicode_text, (self.unicode_string*2))
 
-    def test_file_utf8_write_raises_unicodeerror(self):
-        """Test write of a utf-8 encoded file with write method raises UnicodeEncodeError in Python 2"""
-        if state.py2:
-            with (self.assertRaises(UnicodeEncodeError)):
-                FileWriter(self.unicode_path).write(self.unicode_string)
+    def test_file_utf8_append_works_with_utf8(self):
+        FileWriter(self.unicode_path).write_utf8(self.unicode_string)
+        FileWriter(self.unicode_path).append(self.unicode_string)
+        unicode_text = FileReader(self.unicode_path).read_utf8()
+        self.assertTrue(len(unicode_text)>0)
+        self.assertEqual(unicode_text, (self.unicode_string*2))
 
     def test_file_utf8_write_noraise_unicodeerror(self):
-        """Test write of a utf-8 file with write method does not raise UnicodeEncodeError in Python 3"""
-        if state.py3:
-            FileWriter(self.unicode_path).write(self.unicode_string)
+        """Test write of a utf-8 file with write method does not raise UnicodeEncodeError in Python 2 or 3"""
+        FileWriter(self.unicode_path).write(self.unicode_string)
+        unicode_text = FileReader(self.unicode_path).read_utf8()
+        self.assertEqual(self.unicode_string, unicode_text)
 
-    def test_file_utf8_readwrite_raises_unicodeerror(self):
-        """Test read of utf-8 encoded file with read method & attempt to encode as utf-8 raises exception in Python 2"""
+    def test_file_utf8_readwrite_noraise_unicodeerror(self):
+        """Test read and write does not raise unicode errors in Python 2 or 3"""
+        FileWriter(self.unicode_path).write(self.unicode_string)
+        unicode_text = FileReader(self.unicode_path).read()
+        self.assertEqual(self.unicode_string, unicode_text)
+
+    def test_file_utf8_safewrite(self):
+        """Test safe_write() to confirm does not overwrite existing file with unicode string"""
+        os.remove(self.unicode_path) #remove the existing text file for tests
+        if os.path.exists(self.unicode_path):
+            raise IOError("The unicode test file was not deleted. (test_IO.py.test_file_utf8_safewrite)")
+        else:
+            safe_response = FileWriter(self.unicode_path).safe_write(self.unicode_string) # attempt safe_write when no preexisting file present
+            u_text = FileReader(self.unicode_path).read()
+            self.assertEqual(u_text, self.unicode_string) # assert that the correct text was written
+            self.assertEqual(safe_response, True) # assert that returns True when file not present and writes
+
+            if os.path.exists(self.unicode_path):
+                    self.assertEqual(FileWriter(self.unicode_path).safe_write(self.unicode_string), False) #confirm that returns False to calling function when there is a pre-existing file
+            else:
+                raise IOError("The unicode test file is not present (test_IO.py.test_file_utf8_safewrite)")
+
+    def test_file_readwrite_utf8_string_type(self):
+        FileWriter(self.unicode_path).write(self.unicode_string)
+        unicode_text = FileReader(self.unicode_path).read()
         if state.py2:
-            with (self.assertRaises(UnicodeDecodeError)):
-                FileWriter(self.unicode_path).write_utf8(self.unicode_string)
-                unicode_text = FileReader(self.unicode_path).read()
-                encoded_text = unicode_text.encode("utf-8")
+            self.assertEqual(type(unicode("test string")), type(unicode_text)) # confirm that python2 treats as unicode
+        elif state.py3:
+            self.assertEqual(type(str("test string")), type(unicode_text)) # confirm that python3 treats as str
 
-    def test_file_utf8_readwrite_doesnotraise_unicodeerror(self):
-        """Test read of utf-8 encoded file with read method does not raise exception in Python 3"""
-        if state.py3:
-            FileWriter(self.unicode_path).write_utf8(self.unicode_string)
-            unicode_text = FileReader(self.unicode_path).read()
+    def test_file_readutf8_writeutf8_string_type(self):
+        FileWriter(self.unicode_path).write_utf8(self.unicode_string)
+        unicode_text = FileReader(self.unicode_path).read_utf8()
+        if state.py2:
+            self.assertEqual(type(unicode("test string")), type(unicode_text)) # confirm that python2 treats as unicode
+        elif state.py3:
+            self.assertEqual(type(str("test string")), type(unicode_text)) # confirm that python3 treats as str
 
     #------------------------------------------------------------------------------
     # BINARY DATA tests
@@ -210,55 +246,6 @@ class NakedIOReadWriteTest(unittest.TestCase):
             gzip_contents = FileReader(self.unicode_path + ".gz").read_gzip("utf-8") # when read with explicit utf-8 decoding, strings should match
             self.assertEqual(gzip_contents, self.unicode_string)
 
-    #------------------------------------------------------------------------------
-    # FILE READER + MODIFIER function tests
-    #------------------------------------------------------------------------------
-    def test_file_read_apply_function(self):
-        """Test apply function to text read from file with read_apply_function"""
-        def add_a_char(text):
-            mod_text = "A" + text
-            return mod_text
-        FileWriter(self.ascii_path).write(self.ascii_string)
-        func_text = FileReader(self.ascii_path).read_apply_function(add_a_char)
-        self.assertEqual(func_text, ("A" + self.ascii_string))
-
-    def test_file_read_apply_function_unicode(self):
-        """Test apply function to unicode text read from file with read_apply_function"""
-        def add_a_char(text):
-            mod_text = "A" + text
-            return mod_text
-        FileWriter(self.unicode_path).write_utf8(self.unicode_string)
-        func_text = FileReader(self.unicode_path).read_apply_function(add_a_char)
-        if state.py2:
-            decoded_text = func_text.decode("utf-8") # have to decode binary string as utf-8 if the original file contained unicode
-        else:
-            decoded_text = func_text
-        self.assertEqual(decoded_text, ("A" + self.unicode_string))
-
-    def test_file_readlines_apply_function(self):
-        """Test apply function to each line of a file with readlines_apply_function"""
-        def add_a_char(text):
-            mod_text = "A" + text
-            return mod_text
-        FileWriter(self.multiline_path).write(self.multiline_string)
-        file_line_list = FileReader(self.multiline_path).readlines_apply_function(add_a_char)
-        self.assertEqual(file_line_list, self.mod_multi_list)
-
-    def test_file_readlines_apply_function_unicode(self):
-        """Test apply function to each line of a file with readlines_apply_function on unicode file"""
-        def add_a_char(text):
-            mod_text = "A" + text
-            return mod_text
-        FileWriter(self.unicode_path).write_utf8(self.unicode_string)
-        file_line_list = FileReader(self.unicode_path).readlines_apply_function(add_a_char)
-        decoded_list = []
-        for line in file_line_list:
-            if state.py2:
-                decoded_line = line.decode("utf-8")
-            else:
-                decoded_line = line
-            decoded_list.append(decoded_line)
-        self.assertEqual(decoded_list, self.mod_uni_multi_list)
     #------------------------------------------------------------------------------
     # MISSING FILE tests
     #------------------------------------------------------------------------------

@@ -6,7 +6,7 @@ import Naked.toolshed.python as python
 import Naked.toolshed.file as nfile
 import Naked.toolshed.ink as ink
 from Naked.toolshed.types import XDict, XString
-from Naked.toolshed.system import make_dirs, make_path
+from Naked.toolshed.system import make_dirs, make_path, exit_success
 import datetime
 import sys
 
@@ -47,7 +47,7 @@ class MakeController:
             print("-----")
             print(" ")
             print("Use 'python setup.py develop' from the top level of your project and you can begin testing your application with the executable, " + data_container.app_name)
-
+            exit_success()
 #------------------------------------------------------------------------------
 # [ InfoCompiler class ]
 #  obtain information from user in order to build a new project
@@ -355,7 +355,7 @@ def help():
     from Naked.toolshed.system import exit_success
     help_string = """
 Naked make Command Help
------------------------
+=======================
 The make command builds a new Naked project.  The project can be built from either responses that you give on the command line, or from a naked.yaml project settings file.
 
 USAGE
@@ -371,8 +371,15 @@ The naked.yaml settings file has the following structure:
 
 Place this in the top level of an empty directory and use `naked make` in the same directory.  Naked will confirm your settings and then build the project directories and files from these settings.
 
+SECONDARY COMMANDS
+  none
+
 OPTIONS
-  none """
+  none
+
+EXAMPLES
+  naked make
+  naked make testapp"""
     print(help_string)
     exit_success()
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# coding=utf-8
+# encoding: utf-8
 
 import unittest
 import os
@@ -14,7 +14,7 @@ class NakedSystemTest(unittest.TestCase):
 		self.bogusfilepath = make_path("testfiles", "testdir", "bogusfile.text")
 		self.metafilepath = make_path("testfiles", "keep", "metadata.txt")
 		self.dir_file_path = make_path("testfiles", "keep")
-		self.dir_file_list = ["file1.txt", "file2.txt", "file3.py", "metadata.txt"]
+		self.dir_file_list = ["file1.txt", "file2.txt", "file3.py", "metadata.txt", "test.tar.gz"]
 		FileWriter(self.sysfilepath).write("test")
 
 	def tearDown(self):
@@ -113,7 +113,7 @@ class NakedSystemTest(unittest.TestCase):
 
 	def test_sys_meta_file_mod(self):
 		"""Test file modification date and time metadata read"""
-		self.assertEqual("Wed Jan  1 23:13:17 2014", system.file_mod_time(self.metafilepath))
+		self.assertEqual("Wed Jan 29 23:49:04 2014", system.file_mod_time(self.metafilepath))
 
 	#------------------------------------------------------------------------------
 	# FILE LISTING TESTS
@@ -186,7 +186,7 @@ class NakedSystemTest(unittest.TestCase):
 
 	def test_sys_add_currentdir_path_first_arg(self):
 		"""Test decorator addition of cwd path as first argument of decorated function"""
-		@system.currentdir_firstargument
+		@system.currentdir_firstparam
 		def path_returner(dir):
 			return dir
 
@@ -195,7 +195,7 @@ class NakedSystemTest(unittest.TestCase):
 
 	def test_sys_add_currentdir_last_arg(self):
 		"""Test decorator addition of cwd path as last argument of decorated function"""
-		@system.currentdir_lastargument
+		@system.currentdir_lastparam
 		def path_returner(bogus_param, current_dir=""):
 			return current_dir
 
@@ -218,8 +218,14 @@ class NakedSystemTest(unittest.TestCase):
 			self.assertEqual(1, sysexit.code)
 
 	def test_sys_exit_with_code(self):
+		"""Test application exit with developer assigned code 0"""
+		with (self.assertRaises(SystemExit)) as sysexit:
+			system.exit_with_status() #default status code is 0
+			self.assertEqual(0, sysexit.code)
+
+	def test_sys_exit_with_code_assigned(self):
 		"""Test application exit with developer assigned code 1"""
 		with (self.assertRaises(SystemExit)) as sysexit:
-			system.exit_with_status() #default status code is 1
+			system.exit_with_status(1) #default status code is 0
 			self.assertEqual(1, sysexit.code)
 
